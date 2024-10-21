@@ -32,6 +32,53 @@ class MyApp extends StatelessWidget {
       title: 'Material App',
       theme: AppTheme().getTheme(),
       routerConfig: AppRouter.routes,
+      builder: (context, child) =>
+          HandleNotificationInteractions(child: child!),
     );
+  }
+}
+
+class HandleNotificationInteractions extends StatefulWidget {
+  final Widget child;
+
+  const HandleNotificationInteractions({super.key, required this.child});
+
+  @override
+  State<HandleNotificationInteractions> createState() =>
+      _HandleNotificationInteractionsState();
+}
+
+class _HandleNotificationInteractionsState
+    extends State<HandleNotificationInteractions> {
+  Future<void> setupInteractedMessage() async {
+    RemoteMessage? initialMessage =
+        await FirebaseMessaging.instance.getInitialMessage();
+
+    if (initialMessage != null) {
+      _handleMessage(initialMessage);
+    }
+
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleMessage);
+  }
+
+  void _handleMessage(RemoteMessage message) {
+    context.read<NotificationsBloc>().handleRemoteMessage(message);
+
+    //Como quizás no esta inicializada el go_router, es mejor utilizar directamente el appRouter
+    final messageId =
+        message.messageId?.replaceAll(':', '').replaceAll('%', '');
+
+    AppRouter.routes.push('/push-details/$messageId');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    setupInteractedMessage();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }
