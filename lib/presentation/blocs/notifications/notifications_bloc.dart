@@ -6,7 +6,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'package:push_app/domain/domain.dart';
 import 'package:push_app/firebase_options.dart';
-import 'package:push_app/config/local_notifications/local_notifications.dart';
 
 part 'notifications_event.dart';
 part 'notifications_state.dart';
