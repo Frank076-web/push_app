@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'package:push_app/domain/domain.dart';
 import 'package:push_app/firebase_options.dart';
+import 'package:push_app/config/local_notifications/local_notifications.dart';
 
 part 'notifications_event.dart';
 part 'notifications_state.dart';
@@ -17,8 +18,19 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 class NotificationsBloc
     extends Bloc<NotificationsEvent, NotificationsBlocState> {
   final FirebaseMessaging messaging = FirebaseMessaging.instance;
+  int pushNumberId = 0;
 
-  NotificationsBloc() : super(const NotificationsBlocState()) {
+  final Future<void> Function()? requestLocalNotificationPermissions;
+  final void Function({
+    required int id,
+    String? title,
+    String? body,
+    String? data,
+  })? showLocalNotification;
+
+  NotificationsBloc(
+      {this.requestLocalNotificationPermissions, this.showLocalNotification})
+      : super(const NotificationsBlocState()) {
     on<NotificationStatusChanged>(_notificationStatusChanged);
     on<NotificationRecieved>(_onNotificationReceived);
 
@@ -41,7 +53,7 @@ class NotificationsBloc
       status: event.status,
     ));
 
-    _getFCMToken();
+    // _getFCMToken();
   }
 
   void _onNotificationReceived(
@@ -57,13 +69,13 @@ class NotificationsBloc
     add(NotificationStatusChanged(settings.authorizationStatus));
   }
 
-  Future<void> _getFCMToken() async {
-    if (state.status != AuthorizationStatus.authorized) return;
+  // Future<void> _getFCMToken() async {
+  //   if (state.status != AuthorizationStatus.authorized) return;
 
-    final token = await messaging.getToken();
-  }
+  //   final token = await messaging.getToken();
+  // }
 
-  void handleRemoteMessage(RemoteMessage message) {
+  Future<void> handleRemoteMessage(RemoteMessage message) async {
     if (message.notification == null) return;
 
     final notification = PushMessage(
@@ -77,6 +89,15 @@ class NotificationsBloc
           ? message.notification!.android?.imageUrl
           : message.notification!.apple?.imageUrl,
     );
+
+    if (showLocalNotification != null) {
+      showLocalNotification!(
+        id: ++pushNumberId,
+        title: notification.title,
+        body: notification.body,
+        data: notification.messageId,
+      );
+    }
 
     add(NotificationRecieved(notification));
   }
@@ -96,9 +117,14 @@ class NotificationsBloc
       sound: true,
     );
 
+    if (requestLocalNotificationPermissions != null) {
+      await requestLocalNotificationPermissions!();
+    }
+    // await LocalNotifications.requestPermissionLocalNotifications();
+
     add(NotificationStatusChanged(settings.authorizationStatus));
 
-    settings.authorizationStatus;
+    // settings.authorizationStatus;
   }
 
   PushMessage? getMessageById(String pushMessageId) {
